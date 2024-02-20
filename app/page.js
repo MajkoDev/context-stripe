@@ -1,42 +1,58 @@
-import CartItem from "@/components/CartItem";
-import ProductCard from "@/components/ProductCard";
+import Stripe from "stripe";
 
-export default function Home() {
+// Components
+import ProductCard from "@/components/ProductCard";
+import CartSummary from "@/components/CartSummary";
+
+// Fetching Products from Stripe
+async function getProducts() {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const inventory = await stripe.products.list({
+    // to get information on price
+    expand: ["data.default_price"],
+    limit: 8,
+  });
+
+  const products = inventory.data.map((product) => {
+    const price = product.default_price;
+    return {
+      currency: price.currency,
+      id: product.id,
+      name: product.name,
+      price: price.unit_amount,
+      image: product.images[0],
+      quantity: product.quantity,
+    };
+  });
+
+  return products;
+}
+
+export default async function Home() {
+  const products = await getProducts();
+
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start py-12 px-24">
+    <main className="flex min-h-screen flex-col items-center justify-start py-2 px-4">
       <h2 className="py-6 text-center text-xl font-medium">
         Nextjs project that is focused on stripe payment with sessions <br />{" "}
         and product management with react context.
       </h2>
 
-      <div className="w-full pb-8 pt-2">
+      <div className="w-full pb-8 pt-2 mx-4">
         <h1 className="text-center text-xl font-bold">Products</h1>
         <div className="flex flex-wrap justify-center gap-x-3 gap-y-4">
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
+          {products?.map((price) => (
+            <ProductCard key={price.id} price={price} />
+          ))}
         </div>
       </div>
 
       <div className="w-full pb-8 pt-2">
         <h1 className="text-center text-xl font-bold mb-4">Shopping Cart</h1>
-        <div className="flex flex-col justify-center items-center gap-2">
-          <CartItem />
-          <CartItem />
-        </div>
-        <div className="flex flex-col gap-3 items-center pt-3">
-          <h1 className="text-lg font-semibold m-4">Total: 100$</h1>
-          <div className="flex flex-row gap-3 ">
-            <button className="py-2 rounded-md px-4 text-slate-50 hover:cursor-pointer bg-pink-500 hover:bg-pink-800 text-lg font-semibold">
-              Reset Cart
-            </button>
-            <button className="py-2 rounded-md px-4 text-slate-50 hover:cursor-pointer bg-lime-500 hover:bg-lime-800 text-lg font-semibold">
-              Checkout
-            </button>
-          </div>
-        </div>
+
+        <CartSummary />
+       
       </div>
     </main>
   );
